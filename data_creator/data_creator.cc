@@ -3,7 +3,6 @@
 #include <fstream>
 #include <stdlib.h>
 #include <time.h>
-//#include <functional>
 #include <limits>
 #include <string>
 
@@ -13,6 +12,12 @@ namespace
 	unsigned long _flush_record_size = 10000;
 	size_t _records_to_hash_dispersion = 3;
 	size_t _avarge_same_hash_records = 7;
+}
+
+void OutputFlush(std::ofstream& os, const char* buffer, size_t buf_size)
+{
+	os.write(buffer, buf_size);
+	os.flush();
 }
 
 int main(int argc, char* argv[])
@@ -62,6 +67,7 @@ int main(int argc, char* argv[])
 	unsigned int record_hash = 0, curr_hash_rec_num = 0;
 	unsigned int report_step_number = records_number / 20;// every 5 %
 
+	//create records
 	for (unsigned long rn = 0; rn < records_number; ++rn, --curr_hash_rec_num)
 	{
 		if (rn % report_step_number == 0 && rn != 0)
@@ -69,7 +75,9 @@ int main(int argc, char* argv[])
 
 		if (curr_hash_rec_num == 0)
 		{
+			//multiple records can have the same search key, curr_hash_rec_num determines how many records to cetain sk  
 			curr_hash_rec_num = _avarge_same_hash_records + (rand() % (2 * _records_to_hash_dispersion) - _records_to_hash_dispersion);
+			//for this time record_hash simply increment by one to simulate data records sorted by sk in file
 			++record_hash;
 		}
 
@@ -79,12 +87,15 @@ int main(int argc, char* argv[])
 		std::streampos in_fl_offset = rand() % (input_file_size - _record_size);
 		input_fl.seekg(in_fl_offset);
 		input_fl.read(record_data + rec_offset + sizeof(unsigned int), _record_size);
-		output_fl.write(reinterpret_cast<char*>(&record_hash), sizeof(record_hash));
-		output_fl.write(record_data, _record_size);
 
-		if (rn % _flush_record_size == 0 && rn != 0)
-			output_fl.flush();
+		if ((rn + 1) % _flush_record_size == 0 && rn != 0)
+			OutputFlush(output_fl, record_data, full_record_size);
+
 	}
+	
+	//if something still in buffer, let's flush it
+	if (records_number % _flush_record_size != 0)
+		OutputFlush(output_fl, record_data, (records_number % _flush_record_size) * full_record_size);
 
 	delete[] record_data;
 	output_fl.close();
