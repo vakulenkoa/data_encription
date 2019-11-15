@@ -1,11 +1,11 @@
-CC = g++
-CFLAGS = -Wall -std=c++11
+CC = gcc
+CFLAGS = -Wall -std=gnu99
 OBJECT = data_creator
 TEST_FILE = input.txt
 OUT_FILE = out.data
 
 all :
-	$(CC) $(CFLAGS) $(OBJECT).cc -o $(OBJECT)
+	$(CC) $(CFLAGS) $(OBJECT).c -o $(OBJECT)
 
 clean :
 	rm -f $(OBJECT)
