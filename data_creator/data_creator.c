@@ -1,11 +1,13 @@
-#include <string.h>
+#include "data_creator.h"
+
+//#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
 
 void OutputFlush(FILE* ws, const char* buffer, size_t buf_size);
 
-int main(int argc, char* argv[])
+int GenerateData(const char* input_file_path, unsigned long records_number, const char* output_file_path, unsigned int seed)
 {
 	//init some constatnts
 	const size_t _record_size = 80; //record size in bytes
@@ -13,47 +15,33 @@ int main(int argc, char* argv[])
 	const size_t _records_to_hash_dispersion = 3; //possible deviation from avarage number
 	const size_t _avarge_same_hash_records = 7; //avarage number of records with same search key
 
-	//check args
-	if (argc < 4 || argc > 5 || (strcmp("help", argv[1]) == 0))
+	if (records_number == 0)
 	{
-		printf("The program accept 3 - 4 arguments only.\n");
-		printf("First one: path to input text file.\n");
-		printf("Second one: number of records to create.\n");
-		printf("Third one: path to output data.\n");
-		printf("Forth one (optional): seed number (0-4294967296).\n");
-		printf("For example: ./data_creator input_data.txt 10000 out_data.dat 890990897\n");
+		printf("Record number should be grather then 0.");
 		return 1;
 	}
 
-	unsigned long records_number = atol(argv[2]);
-	if (records_number <= 0)
-		printf("Record number should be grather then 0 or unable to convert \'%s\' to number.", argv[2]);
-
-	size_t seed_number;
-	if (argc == 5)
-		seed_number = atoi(argv[4]);
-	else
-		seed_number = (size_t )(time(NULL));
-
 	//read input file
-	FILE *input_fl = fopen(argv[1], "rb");
+	FILE *input_fl = fopen(input_file_path, "rb");
 	if (input_fl == NULL)
 	{
-		printf("Could not open file %s", argv[1]);
+		printf("Could not open file %s", input_file_path);
 		return 2;
 	}
 
+	//check input file size
 	fseek(input_fl, 0L, SEEK_END);
 	long input_file_size = ftell(input_fl);
 
-	srand(seed_number);
-
-	FILE* output_fl = fopen(argv[3], "wb");
+	FILE* output_fl = fopen(output_file_path, "wb");
 	if (output_fl == NULL)
 	{
-		printf("Could not open file %s", argv[3]);
+		printf("Could not open file %s", output_file_path);
 		return 3;
 	}
+
+	//seed for randomize
+	srand(seed == 0? (size_t )(time(NULL)) : seed);
 
 	const unsigned long full_record_size = _record_size + sizeof(unsigned int);
 	char* record_data = (char *)malloc(full_record_size * _flush_record_size);
@@ -81,7 +69,7 @@ int main(int argc, char* argv[])
 		fseek(input_fl, in_fl_offset, SEEK_SET);		
 		if (fread(record_data + rec_offset + sizeof(unsigned int), sizeof(char), _record_size, input_fl) != _record_size)
 		{
-			printf("Error during \'%s\' file reading", argv[1]);
+			printf("Error during \'%s\' file reading", input_file_path);
 			return 1;
 		}
 

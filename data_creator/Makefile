@@ -1,15 +1,24 @@
 CC = gcc
-CFLAGS = -Wall -std=gnu99
+CFLAGS = -Wall -std=gnu99 -fpic
 OBJECT = data_creator
 TEST_FILE = input.txt
 OUT_FILE = out.data
+DEPLOY_DIR=$(HOME)/bin/data_encryption
 
 all :
-	$(CC) $(CFLAGS) $(OBJECT).c -o $(OBJECT)
+	$(CC) -c $(CFLAGS) $(OBJECT).c
+	$(CC) -shared -o lib$(OBJECT).so $(OBJECT).o
 
 clean :
-	rm -f $(OBJECT)
+	rm -f lib$(OBJECT).so
+	rm -f $(OBJECT).o
 
-testing : clean all
-	./$(OBJECT) $(TEST_FILE) 10 $(OUT_FILE) 0
-	test -s $(OUT_FILE) && echo File does exist
+deploy: all
+	echo $(DEPLOY_DIR)
+	mkdir -p $(DEPLOY_DIR)
+	rm -f $(DEPLOY_DIR)/lib$(OBJECT).so
+	mv lib$(OBJECT).so $(DEPLOY_DIR)
+
+#testing : clean all
+#	./$(OBJECT) $(TEST_FILE) 10 $(OUT_FILE) 0
+#	test -s $(OUT_FILE) && echo File does exist
