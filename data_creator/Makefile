@@ -14,7 +14,6 @@ clean :
 	rm -f $(OBJECT).o
 
 deploy: all
-	echo $(DEPLOY_DIR)
 	mkdir -p $(DEPLOY_DIR)
 	rm -f $(DEPLOY_DIR)/lib$(OBJECT).so
 	mv lib$(OBJECT).so $(DEPLOY_DIR)
