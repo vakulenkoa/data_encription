@@ -1,14 +1,14 @@
 #ifndef tink_api_h__
 #define tink_api_h__
 
+#include "api_extern_structs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-//int InitTink(const char* path_aes_key_file, const char* secret_prase);
-int Encrypt(const char* str_to_encrypt, const char* path_aes_key_file, const char* secret_prase, char* out_str, unsigned int max_out_str_size);
-int Decrypt(const char* str_to_decrypt, const char* path_aes_key_file, const char* secret_prase, char* out_str, unsigned int max_out_str_size);
-//int Decrypt(const char* str_to_encrypt, char* out_str_to_decrypt);
+int Encrypt(const char* path_aes_key_file, struct tink_crypt_param_struct* encrypt_params);
+int Decrypt(const char* path_aes_key_file, struct tink_crypt_param_struct* decrypt_params);
 
 #ifdef __cplusplus
 }

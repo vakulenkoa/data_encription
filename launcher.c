@@ -4,9 +4,16 @@
 //#include <unistd.h>
 #include <getopt.h>
 #include <string.h>
+#include <libgen.h>
+
+#include <dlfcn.h>
 
 #include "data_creator/data_creator.h"
-# include "encryptor/tink_api.h"
+
+#define DATA_CREATOR_LIB_FILE_NAME "./libdata_creator.so"
+#define GEN_DATA_FUNC_NAME "GenerateData"
+
+#define LONG_PATH_BUFF_SIZE 384
 
 typedef struct LauncherArguments
 {
@@ -33,14 +40,14 @@ void PrintHelp(FILE* stream, const char* program_name, int exit_code)
             "  -s  --seed             Define seed number [1-4294967296] for randon oprtation (for determination behavior).\n"
             "  -p  --phrase           Secret phrase for encryption/decription.\n"
             "  -k  --key              Encryption key file path.\n"
-            "  -v  --verbose          x3 for now.\n");
+            "  -v  --verbose          X3 for now.\n");
     exit (exit_code); 
 }
 
 void ParseArguments(int argc, char** argv, LauncherArguments* args)
 {
     const char* program_name = argv[0];
-    *args = (LauncherArguments) { .command = 999, .input_file_path = NULL, .output_file_path = NULL, .qnt = 100, .seed = 0 };
+    *args = (LauncherArguments) { .command = 999, .input_file_path = NULL, .output_file_path = NULL, .qnt = 100, .seed = 0, .secret_phrase = NULL, .encrypt_key_file_path = NULL };
 
     const char* const short_options = "gedhvo:i:q:s:p:k:";
     const struct option long_options[] = {
@@ -117,12 +124,11 @@ void ParseArguments(int argc, char** argv, LauncherArguments* args)
             break;
 
         default: 
-            abort();
+            printf("Undefined option '%c'. Ignored.", next_option);
             break;
         }
     }
-    while (next_option != -1);
-
+    while (next_option != -1); 
     if (verbose)
     {
         printf("Parsed arguments:\n");
@@ -132,8 +138,6 @@ void ParseArguments(int argc, char** argv, LauncherArguments* args)
         printf("Quantity = %lu\n", args->qnt);
         printf("Seed = %u\n", args->seed);
     }
-
-    //return 0;
 }
 
 int main (int argc, char *argv[]) 
@@ -141,33 +145,65 @@ int main (int argc, char *argv[])
     LauncherArguments args;
     ParseArguments(argc, argv, &args);
 
-    if (args.command == 0)
-        GenerateData(args.input_file_path, args.qnt, args.output_file_path, args.seed);
-    else if (args.command == 1)
-    {
-        const char* plain_text = "AAA The Message AAA";
-        printf ("This is plain text: %s\n", plain_text); 
+    // char path_buff[LONG_PATH_BUFF_SIZE] = {0};
 
-        char buff[128];
-        memset(buff, 0, sizeof(buff));
-        if (Encrypt(plain_text, args.encrypt_key_file_path, args.secret_phrase, buff, 128))
+    // char* cur_dir_path;
+    // if (readlink ("/proc/self/exe", path_buff, LONG_PATH_BUFF_SIZE) != -1)
+    // {
+    //     cur_dir_path = dirname(path_buff);
+    // }
+
+    if (args.command == 0)
+    {
+        // determine full lib path
+        // strcpy(path_buff, cur_dir_path);
+        // strcat(path_buff, "/");
+        // strcat(path_buff, DATA_CREATOR_LIB_FILE_NAME);
+
+        void*  handle = dlopen(DATA_CREATOR_LIB_FILE_NAME, RTLD_NOW);
+        if (handle == NULL)
         {
-            printf ("This is encripted text: %s\n", buff);
-            //Just for initial check proposes
-            char buff2[128];
-            memset(buff2, 0, sizeof(buff2));
-            if (!Decrypt(buff, args.encrypt_key_file_path, args.secret_phrase, buff2, 128))
-            {
-                printf ("Decrypt fails!\n");
-                return 1;
-            }
-            printf ("This is decrypted text: %s\n", buff2);
-        }
-        else
-        {
-            printf ("Encrypt is failed.\n");
+            printf("Error. System unable to load %s library.", DATA_CREATOR_LIB_FILE_NAME);
             return 1;
         }
+        //check handle
+        typedef int (* generate_data_func_t) (const char*, const unsigned long, const char*, const unsigned int, const char*);
+        generate_data_func_t  generate_data_func = (generate_data_func_t ) dlsym (handle, GEN_DATA_FUNC_NAME);
+        if (generate_data_func == NULL)
+        {
+            printf("Error. %s function of %s library was not load.", GEN_DATA_FUNC_NAME, DATA_CREATOR_LIB_FILE_NAME);
+            return 1;
+        }
+        //check function
+        return (*generate_data_func)(args.input_file_path, args.qnt, args.output_file_path, args.seed, args.encrypt_key_file_path);
+    }
+    else if (args.command == 1)
+    {
+        printf ("Encryption to be implemented.\n");
+
+        // const char* plain_text = "AAA The Message AAA";
+        // printf ("This is plain text: %s\n", plain_text); 
+
+        // char buff[128];
+        // memset(buff, 0, sizeof(buff));
+        // if (Encrypt(plain_text, args.encrypt_key_file_path, args.secret_phrase, buff, 128))
+        // {
+        //     printf ("This is encripted text: %s\n", buff);
+        //     //Just for initial check proposes
+        //     char buff2[128];
+        //     memset(buff2, 0, sizeof(buff2));
+        //     if (!Decrypt(buff, args.encrypt_key_file_path, args.secret_phrase, buff2, 128))
+        //     {
+        //         printf ("Decrypt fails!\n");
+        //         return 1;
+        //     }
+        //     printf ("This is decrypted text: %s\n", buff2);
+        // }
+        // else
+        // {
+        //     printf ("Encrypt is failed.\n");
+        //     return 1;
+        // }
     }
     else if (args.command == 2)
         printf ("Decryption to be implemented.\n");
@@ -176,3 +212,4 @@ int main (int argc, char *argv[])
 
     return 0;
 }
+

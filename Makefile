@@ -1,5 +1,5 @@
-#CC = gcc
-CFLAGS = -Wall #-std=gnu99 -fpic
+CC = gcc
+CFLAGS = -Wall -fPIC
 OBJECT = launcher
 TEST_FILE = input.txt
 OUT_FILE = out.data
@@ -17,14 +17,12 @@ TINK_INCLUDE_DIR_LIST = -I$(TINK_BASE_INCLUDE_DIR) -I$(TINK_BASE_INCLUDE_DIR)/__
 
 all :
 	cd $(DATA_CREATOR_DIR) && $(MAKE)
-	cd $(ENCRYPTOR_DIR) && $(MAKE)
 	$(CC) -c $(CFLAGS) $(OBJECT).c
-	$(CC) -o $(OBJECT) $(OBJECT).o -L$(CURDIR)/$(DATA_CREATOR_DIR) -ldata_creator -L$(CURDIR)/$(ENCRYPTOR_DIR) -lencryptor -L/usr/lib64 -lpthread -lstdc++ -L$(TINK_DIR)/lib -ltink -lm -lrt
+	$(CC) -o $(OBJECT) $(OBJECT).o -ldl -Wl,-rpath=./ -L$(CURDIR)/$(DATA_CREATOR_DIR) -ldata_creator -L/usr/lib64 -lpthread -lstdc++ -L$(TINK_DIR)/lib -ltink -lm -lrt
 
 clean :
 	rm -f $(OBJECT)
 	rm -f $(OBJECT).o
-
 
 deploy: all
 	cd $(DATA_CREATOR_DIR) && $(MAKE) deploy

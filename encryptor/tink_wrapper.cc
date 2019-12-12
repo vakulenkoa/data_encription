@@ -11,6 +11,7 @@
 #include "tink/keyset_reader.h"
 #include "tink/config/tink_config.h"
 
+#include "tink/aead/aead_key_templates.h"
 #include <exception>
 
 namespace 
@@ -24,8 +25,6 @@ namespace
     auto status = crypto::tink::TinkConfig::Register();
     if (!status.ok()) {
       throw std::runtime_error(std::string("Initialization of Tink failed: ") + status.error_message());
-      // std::clog << "Initialization of Tink failed: "
-      //           << status.error_message() << std::endl;
     }
   }
 
@@ -39,9 +38,6 @@ namespace
     auto keyset_reader_result =
         crypto::tink::JsonKeysetReader::New(std::move(keyset_stream));
     if (!keyset_reader_result.ok()) {
-      // std::clog << "Creation of the reader failed: "
-      //           << keyset_reader_result.status().error_message() << std::endl;
-      // exit(1);
       throw std::runtime_error(std::string("Creation of the reader failed: ") + keyset_reader_result.status().error_message());
     }
     return std::move(keyset_reader_result.ValueOrDie());
@@ -51,13 +47,11 @@ namespace
   // which is expected to contain a JSON-formatted keyset.
   std::unique_ptr<crypto::tink::KeysetHandle> ReadKeyset(
       const std::string& filename) {
-    auto keyset_reader = GetJsonKeysetReader(filename);
-    auto keyset_handle_result =
-        crypto::tink::CleartextKeysetHandle::Read(std::move(keyset_reader));
+     auto keyset_reader = GetJsonKeysetReader(filename);
+     auto keyset_handle_result =
+         crypto::tink::CleartextKeysetHandle::Read(std::move(keyset_reader));
+        
     if (!keyset_handle_result.ok()) {
-      // std::clog << "Reading the keyset failed: "
-      //           << keyset_handle_result.status().error_message() << std::endl;
-      // exit(1);
       throw std::runtime_error(std::string("Reading the keyset failed: ") + keyset_handle_result.status().error_message());
     }
     return std::move(keyset_handle_result.ValueOrDie());
@@ -93,83 +87,8 @@ namespace
 
 }  // namespace
 
-
-
-// int main(int argc, char** argv) {
-//   if (argc != 6) {
-//     std::clog << "Usage: " << argv[0]
-//          << "  keyset-file operation input-file associated-data output-file\n";
-//     exit(1);
-//   }
-
-//   std::string keyset_filename(argv[1]);
-//   std::string operation(argv[2]);
-//   std::string input_filename(argv[3]);
-//   std::string associated_data(argv[4]);
-//   std::string output_filename(argv[5]);
-//   if (!(operation == "encrypt" || operation == "decrypt")) {
-//     std::clog << "Unknown operation '" << operation << "'.\n"
-//               << "Expected 'encrypt' or 'decrypt'.\n";
-//     exit(1);
-//   }
-//   std::clog << "Using keyset from file " << keyset_filename
-//             << " to AEAD-" << operation
-//             << " file "<< input_filename
-//             << " with associated data '" << associated_data << "'.\n"
-//             << "The resulting output will be written to file "
-//             << output_filename << std::endl;
-
-//   // Init Tink;
-//   InitTink();
-
-//   // Read the keyset.
-//   auto keyset_handle = ReadKeyset(keyset_filename);
-
-//   // Get the primitive.
-//   auto primitive_result = keyset_handle->GetPrimitive<crypto::tink::Aead>();
-//   if (!primitive_result.ok()) {
-//     std::clog << "Getting AEAD-primitive from the factory failed: "
-//               << primitive_result.status().error_message() << std::endl;
-//     exit(1);
-//   }
-//   std::unique_ptr<crypto::tink::Aead> aead =
-//       std::move(primitive_result.ValueOrDie());
-
-//   // Read the input.
-//   std::string input = Read(input_filename);
-
-//   // Compute the output.
-//   std::clog << operation << "ing...\n";
-//   std::string output;
-//   if (operation == "encrypt") {
-//     auto encrypt_result = aead->Encrypt(input, associated_data);
-//     if (!encrypt_result.ok()) {
-//       std::clog << "Error while encrypting the input:"
-//                 << encrypt_result.status().error_message() << std::endl;
-//       exit(1);
-//     }
-//     output = encrypt_result.ValueOrDie();
-//   } else {  // operation == "decrypt"
-//     auto decrypt_result = aead->Decrypt(input, associated_data);
-//     if (!decrypt_result.ok()) {
-//       std::clog << "Error while decrypting the input:"
-//                 << decrypt_result.status().error_message() << std::endl;
-//       exit(1);
-//     }
-//     output = decrypt_result.ValueOrDie();
-//   }
-
-//   // Write the output to the output file.
-//   Write(output, output_filename);
-
-//   std::clog << "All done.\n";
-//   return 0;
-// }
-
-TinkWrapper::TinkWrapper(const char * path_key_file, const char* secret_prase)
+TinkWrapper::TinkWrapper(const char * path_key_file)
 {
-  //m_secret_word = secret_prase;
-
   InitTink();
   // Read the keyset.
   auto keyset_handle = ReadKeyset(path_key_file);
@@ -183,42 +102,37 @@ TinkWrapper::TinkWrapper(const char * path_key_file, const char* secret_prase)
   m_aead = std::move(primitive_result.ValueOrDie());
 }
 
-// void TinkWrapper::SetSecretWord(const char* secret_phrase)
-// {
-//    m_secret_word = secret_prase;
-// }
-
-void TinkWrapper::Encrypt(const char* str_to_encrypt, const char* secret_phrase, char* out_str, size_t max_buffer_length)
+void TinkWrapper::Encrypt(tink_crypt_param_struct* encrypt_params)
 {
   if (!m_aead.get())
     throw std::runtime_error(std::string("AEAD is not initialized"));
 
-  auto encrypt_result = m_aead->Encrypt(str_to_encrypt, secret_phrase);
+  auto encrypt_result = m_aead->Encrypt(absl::string_view(encrypt_params->input_str, encrypt_params->input_str_size), absl::string_view(encrypt_params->associated_data, encrypt_params->associated_data_size));
 
   if (!encrypt_result.ok()) 
     throw std::runtime_error(std::string("Error while encrypting the input: ") + encrypt_result.status().error_message());
 
   std::string& output = encrypt_result.ValueOrDie();
 
-  if (output.size() > max_buffer_length)
-    throw std::runtime_error(std::string("Encrypted output exceed max size of buffer."));
+  if (output.size() > encrypt_params->out_buffer_size - 1)
+     throw std::runtime_error(std::string("Encrypted output exceed max size of buffer."));
   
-  memcpy(out_str, output.c_str(), output.size());
+  memcpy(encrypt_params->out_buffer, output.c_str(), output.size());
 }
 
-void TinkWrapper::Decrypt(const char* str_to_decrypt, const char* secret_phrase, char* out_str, size_t max_buffer_length)
+void TinkWrapper::Decrypt(tink_crypt_param_struct* decrypt_params)
 {
   if (!m_aead.get())
     throw std::runtime_error(std::string("AEAD is not initialized"));
 
-  auto decrypt_result = m_aead->Decrypt(str_to_decrypt, secret_phrase);
+  auto decrypt_result = m_aead->Decrypt(absl::string_view(decrypt_params->input_str, decrypt_params->input_str_size), absl::string_view(decrypt_params->associated_data, decrypt_params->associated_data_size));
   if (!decrypt_result.ok()) 
     throw std::runtime_error(std::string("Error while decrypting the input: ") + decrypt_result.status().error_message());
 
   std::string& output = decrypt_result.ValueOrDie();
 
-  if (output.size() > max_buffer_length)
+  if (output.size() > decrypt_params->out_buffer_size - 1)
     throw std::runtime_error(std::string("Encrypted output exceed max size of buffer."));
   
-  memcpy(out_str, output.c_str(), output.size());
+  memcpy(decrypt_params->out_buffer, output.c_str(), output.size());
 }

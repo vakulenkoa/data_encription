@@ -1,48 +1,50 @@
 #include "tink_api.h"
 #include "tink_wrapper.h"
 
-
 #include <iostream>
 
 std::unique_ptr<TinkWrapper> tink_wrapper;
 
-void InitTink(const char* path_aes_key_file, const char* secret_prase)
+void InitTink(const char* path_aes_key_file)
 {
-    tink_wrapper.reset(new TinkWrapper(path_aes_key_file, secret_prase));
+    if (path_aes_key_file == nullptr)
+        throw std::runtime_error("Tink key file was not specified.");
+
+    tink_wrapper.reset(new TinkWrapper(path_aes_key_file));
     std::cout << "Welcome to Tink API." << std::endl; //temp
 }
 
-int Encrypt(const char* str_to_encrypt, const char* path_aes_key_file, const char* secret_prase, char* out_str, unsigned int max_out_str_size)
+int Encrypt(const char* path_aes_key_file, tink_crypt_param_struct* encrypt_params)
 {
     try
     {
         if (tink_wrapper.get() == nullptr)
-            InitTink(path_aes_key_file, secret_prase);
+            InitTink(path_aes_key_file);
 
-        tink_wrapper->Encrypt(str_to_encrypt, secret_prase, out_str, max_out_str_size);
+        tink_wrapper->Encrypt(encrypt_params);
     }
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
-        return 0;
+        return 1;
     }
 
-    return 1;
+    return 0;
 }
 
-int Decrypt(const char* str_to_decrypt, const char* path_aes_key_file, const char* secret_prase, char* out_str, unsigned int max_out_str_size)
+int Decrypt(const char* path_aes_key_file, tink_crypt_param_struct* decrypt_params)
 {
     try
     {
         if (tink_wrapper.get() == nullptr)
-            InitTink(path_aes_key_file, secret_prase);
-        tink_wrapper->Decrypt(str_to_decrypt, secret_prase, out_str, max_out_str_size);
+            InitTink(path_aes_key_file);
+        tink_wrapper->Decrypt(decrypt_params);
     }
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
-        return 0;
+        return 1;
     }
 
-    return 1;
+    return 0;
 }

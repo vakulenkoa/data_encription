@@ -1,7 +1,5 @@
-#CC = g++
 CXX = g++
-CPPFLAGS = -Wall -std=c++11 -fpic
-#-fPIC #-D__CLANG_SUPPORT_DYN_ANNOTATION__ -O3 -DNDEBUG 
+CPPFLAGS = -Wall -std=c++11 -fPIC
 
 TINK_WR_OBJ = tink_wrapper
 TINK_API_OBJ = tink_api
